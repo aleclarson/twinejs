@@ -171,9 +171,13 @@ export const PassageText: React.FC<PassageTextProps> = props => {
 		[disabled, handlePrefix, mode, prefs, storyFormatExtensionsDisabled, t]
 	);
 
+	const hotReloadKey = React.useMemo(() => Date.now(), []);
+	console.log('hotReloadKey', hotReloadKey);
+
 	return (
 		<DialogEditor>
 			<CodeArea
+				key={hotReloadKey}
 				editorDidMount={handleMount}
 				fontFamily={prefs.passageEditorFontFamily}
 				fontScale={prefs.passageEditorFontScale}
