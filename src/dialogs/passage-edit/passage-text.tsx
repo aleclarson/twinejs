@@ -8,6 +8,7 @@ import {StoryFormat} from '../../store/story-formats';
 import {useCodeMirrorPassageHints} from '../../store/use-codemirror-passage-hints';
 import {useFormatCodeMirrorMode} from '../../store/use-format-codemirror-mode';
 import {codeMirrorOptionsFromPrefs} from '../../util/codemirror-options';
+import {EditorConfiguration} from '../../codemirror/types';
 
 export interface PassageTextProps {
 	disabled?: boolean;
@@ -132,27 +133,42 @@ export const PassageText: React.FC<PassageTextProps> = props => {
 		[onEditorChange]
 	);
 
+	const handleSlashPrefix = React.useCallback((editor: CodeMirror.Editor) => {
+		// Implement custom behavior for the "/" prefix here
+		console.log('Slash prefix triggered');
+		editor.showHint({});
+	}, []);
+
+	const handlePrefix = React.useCallback(
+		(editor: CodeMirror.Editor) => {
+			const cursor = editor.getCursor();
+			const isSlash =
+				cursor.ch === 1 &&
+				editor.getRange({line: cursor.line, ch: cursor.ch - 1}, cursor) === '/';
+
+			if (isSlash) {
+				handleSlashPrefix(editor);
+			} else {
+				autocompletePassageNames(editor);
+			}
+		},
+		[autocompletePassageNames, handleSlashPrefix]
+	);
+
 	const options = React.useMemo(
-		() => ({
+		(): EditorConfiguration => ({
 			...codeMirrorOptionsFromPrefs(prefs),
 			mode: storyFormatExtensionsDisabled ? 'text' : mode,
 			lineWrapping: true,
 			placeholder: t('dialogs.passageEdit.passageTextPlaceholder'),
 			prefixTrigger: {
-				callback: autocompletePassageNames,
-				prefixes: ['[[', '->']
+				callback: handlePrefix,
+				prefixes: ['[[', '->', '/']
 			},
 			// This value prevents the area from being focused.
 			readOnly: disabled ? 'nocursor' : false
 		}),
-		[
-			autocompletePassageNames,
-			disabled,
-			mode,
-			prefs,
-			storyFormatExtensionsDisabled,
-			t
-		]
+		[disabled, handlePrefix, mode, prefs, storyFormatExtensionsDisabled, t]
 	);
 
 	return (
