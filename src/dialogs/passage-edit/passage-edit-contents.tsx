@@ -13,6 +13,7 @@ import {PassageToolbar} from './passage-toolbar';
 import {StoryFormatToolbar} from './story-format-toolbar';
 import {TagToolbar} from './tag-toolbar';
 import './passage-edit-contents.css';
+import {useStoryFormatToolbarItems} from './use-story-format-toolbar-items';
 
 export interface PassageEditContentsProps {
 	disabled?: boolean;
@@ -39,6 +40,11 @@ export const PassageEditContents: React.FC<
 		story.storyFormatVersion
 	);
 	const {t} = useTranslation();
+	const toolbarItems = useStoryFormatToolbarItems(
+		storyFormat.name,
+		storyFormat.version,
+		cmEditor
+	);
 
 	React.useEffect(() => {
 		if (error) {
@@ -102,6 +108,7 @@ export const PassageEditContents: React.FC<
 					editor={cmEditor}
 					onExecCommand={handleExecCommand}
 					storyFormat={storyFormat}
+					toolbarItems={toolbarItems}
 				/>
 			)}
 			<TagToolbar disabled={disabled} passage={passage} story={story} />
