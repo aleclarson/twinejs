@@ -9,6 +9,7 @@ import {useCodeMirrorPassageHints} from '../../store/use-codemirror-passage-hint
 import {useFormatCodeMirrorMode} from '../../store/use-format-codemirror-mode';
 import {codeMirrorOptionsFromPrefs} from '../../util/codemirror-options';
 import {EditorConfiguration} from '../../codemirror/types';
+import CodeMirror from 'codemirror';
 
 export interface PassageTextProps {
 	disabled?: boolean;
@@ -136,7 +137,24 @@ export const PassageText: React.FC<PassageTextProps> = props => {
 	const handleSlashPrefix = React.useCallback((editor: CodeMirror.Editor) => {
 		// Implement custom behavior for the "/" prefix here
 		console.log('Slash prefix triggered');
-		editor.showHint({});
+		editor.showHint({
+			completeSingle: false,
+			hint() {
+				const wordRange = editor.findWordAt(editor.getCursor());
+				const completions = {
+					// TODO: put toolbar item names in this list.
+					list: [],
+					from: wordRange.anchor,
+					to: wordRange.head
+				};
+
+				CodeMirror.on(completions, 'pick', (...args: any[]) => {
+					console.log('pick', ...args);
+				});
+
+				return completions;
+			}
+		});
 	}, []);
 
 	const handlePrefix = React.useCallback(
