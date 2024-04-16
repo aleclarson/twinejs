@@ -40,7 +40,7 @@ export const PassageEditContents: React.FC<
 		story.storyFormatVersion
 	);
 	const {t} = useTranslation();
-	const toolbarItems = useStoryFormatToolbarItems(
+	const [toolbarItems, refreshToolbarItems] = useStoryFormatToolbarItems(
 		storyFormat.name,
 		storyFormat.version,
 		cmEditor
@@ -85,7 +85,10 @@ export const PassageEditContents: React.FC<
 
 		const selections = cmEditor.listSelections();
 
-		Promise.resolve().then(() => cmEditor.setSelections(selections));
+		Promise.resolve().then(() => {
+			cmEditor.setSelections(selections);
+			refreshToolbarItems();
+		});
 	}
 
 	if (editorCrashed) {
@@ -105,9 +108,7 @@ export const PassageEditContents: React.FC<
 			{storyFormatExtensionsEnabled && (
 				<StoryFormatToolbar
 					disabled={disabled}
-					editor={cmEditor}
 					onExecCommand={handleExecCommand}
-					storyFormat={storyFormat}
 					toolbarItems={toolbarItems}
 				/>
 			)}

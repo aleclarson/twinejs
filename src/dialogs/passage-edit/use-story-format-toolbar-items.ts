@@ -3,35 +3,34 @@ import CodeMirror from 'codemirror';
 import {usePrefsContext} from '../../store/prefs';
 import {
 	formatWithNameAndVersion,
-	StoryFormatToolbarFactory,
-	StoryFormatToolbarFactoryEnvironment,
 	StoryFormatToolbarItem,
 	useStoryFormatsContext
 } from '../../store/story-formats';
 import {useFormatCodeMirrorToolbar} from '../../store/use-format-codemirror-toolbar';
-import {getAppInfo} from '../../util/app-info';
+import {useComputedTheme} from '../../store/prefs/use-computed-theme';
 
 export function useStoryFormatToolbarItems(
 	formatName: string,
 	formatVersion: string,
 	editor?: CodeMirror.Editor
-): StoryFormatToolbarItem[] {
-	const {dispatch, formats} = useStoryFormatsContext();
+): [StoryFormatToolbarItem[], () => void] {
+	const {formats} = useStoryFormatsContext();
 	const {prefs} = usePrefsContext();
+	const appTheme = useComputedTheme();
 	const format = formatWithNameAndVersion(formats, formatName, formatVersion);
 	const toolbarFactory = useFormatCodeMirrorToolbar(formatName, formatVersion);
 	const [toolbarItems, setToolbarItems] = React.useState<
 		StoryFormatToolbarItem[]
 	>([]);
 
-	React.useEffect(() => {
+	const refreshToolbarItems = React.useCallback(() => {
 		if (editor && toolbarFactory) {
 			try {
 				const style = window.getComputedStyle(editor.getWrapperElement());
 
 				setToolbarItems(
 					toolbarFactory(editor, {
-						appTheme: useComputedTheme(),
+						appTheme,
 						foregroundColor: style.color,
 						locale: prefs.locale
 					})
@@ -45,7 +44,22 @@ export function useStoryFormatToolbarItems(
 		} else {
 			setToolbarItems([]);
 		}
-	}, [editor, format.name, format.version, prefs.locale, toolbarFactory]);
+	}, [
+		editor,
+		format.name,
+		format.version,
+		prefs.locale,
+		toolbarFactory,
+		appTheme
+	]);
 
-	return toolbarItems;
+	React.useEffect(() => {
+		if (editor) {
+			refreshToolbarItems();
+			editor.on('cursorActivity', refreshToolbarItems);
+			return () => editor.off('cursorActivity', refreshToolbarItems);
+		}
+	}, [editor, refreshToolbarItems]);
+
+	return [toolbarItems, setToolbarItems];
 }

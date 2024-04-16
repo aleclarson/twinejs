@@ -1,8 +1,5 @@
 import * as React from 'react';
-import CodeMirror from 'codemirror';
-import {usePrefsContext} from '../../store/prefs';
-import {StoryFormat, StoryFormatToolbarItem} from '../../store/story-formats';
-import {useComputedTheme} from '../../store/prefs/use-computed-theme';
+import {StoryFormatToolbarItem} from '../../store/story-formats';
 import {ButtonBar} from '../../components/container/button-bar';
 import {IconButton} from '../../components/control/icon-button';
 import {MenuButton} from '../../components/control/menu-button';
@@ -10,28 +7,13 @@ import './story-format-toolbar.css';
 
 export interface StoryFormatToolbarProps {
 	disabled?: boolean;
-	editor?: CodeMirror.Editor;
 	onExecCommand: (name: string) => void;
-	storyFormat: StoryFormat;
 	toolbarItems: StoryFormatToolbarItem[];
 }
 
 export const StoryFormatToolbar: React.FC<StoryFormatToolbarProps> = props => {
-	const {disabled, editor, onExecCommand, storyFormat, toolbarItems} = props;
+	const {disabled, onExecCommand, toolbarItems} = props;
 	const containerRef = React.useRef<HTMLDivElement>(null);
-	const appTheme = useComputedTheme();
-	const {prefs} = usePrefsContext();
-
-	function execCommand(name: string) {
-		// Run the command, then update the toolbar after the current execution
-		// context finishes.
-
-		onExecCommand(name);
-		Promise.resolve().then(() => {
-			// No need to update the toolbar here, as it's handled by the
-			// useStoryFormatToolbarItems hook
-		});
-	}
 
 	return (
 		<div className="story-format-toolbar" ref={containerRef}>
@@ -46,7 +28,7 @@ export const StoryFormatToolbar: React.FC<StoryFormatToolbarProps> = props => {
 									iconOnly={item.iconOnly}
 									key={index}
 									label={item.label}
-									onClick={() => execCommand(item.command)}
+									onClick={() => onExecCommand(item.command)}
 								/>
 							);
 
@@ -66,7 +48,7 @@ export const StoryFormatToolbar: React.FC<StoryFormatToolbarProps> = props => {
 													type: 'button',
 													disabled: subitem.disabled,
 													label: subitem.label,
-													onClick: () => execCommand(subitem.command)
+													onClick: () => onExecCommand(subitem.command)
 												};
 											}
 
