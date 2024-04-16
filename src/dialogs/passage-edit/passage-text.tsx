@@ -165,6 +165,12 @@ export const PassageText: React.FC<PassageTextProps> = props => {
 				callback: handlePrefix,
 				prefixes: ['[[', '->', '/']
 			},
+			extraKeys: {
+				call(key, cm) {
+					console.log('Key pressed:', JSON.stringify(key));
+				},
+				fallthrough: undefined
+			},
 			// This value prevents the area from being focused.
 			readOnly: disabled ? 'nocursor' : false
 		}),
