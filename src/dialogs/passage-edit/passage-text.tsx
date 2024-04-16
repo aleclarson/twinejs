@@ -19,6 +19,7 @@ export interface PassageTextProps {
 	story: Story;
 	storyFormat: StoryFormat;
 	storyFormatExtensionsDisabled?: boolean;
+	toolbarItems: any[]; // Add this line
 }
 
 export const PassageText: React.FC<PassageTextProps> = props => {
@@ -29,7 +30,8 @@ export const PassageText: React.FC<PassageTextProps> = props => {
 		passage,
 		story,
 		storyFormat,
-		storyFormatExtensionsDisabled
+		storyFormatExtensionsDisabled,
+		toolbarItems // Add this line
 	} = props;
 	const [localText, setLocalText] = React.useState(passage.text);
 	const {prefs} = usePrefsContext();
@@ -142,8 +144,7 @@ export const PassageText: React.FC<PassageTextProps> = props => {
 			hint() {
 				const wordRange = editor.findWordAt(editor.getCursor());
 				const completions = {
-					// TODO: put toolbar item names in this list.
-					list: [],
+					list: toolbarItems.map(item => item.name), // Use toolbarItems here
 					from: wordRange.anchor,
 					to: wordRange.head
 				};
@@ -155,7 +156,7 @@ export const PassageText: React.FC<PassageTextProps> = props => {
 				return completions;
 			}
 		});
-	}, []);
+	}, [toolbarItems]); // Add toolbarItems to the dependency array
 
 	const handlePrefix = React.useCallback(
 		(editor: CodeMirror.Editor) => {

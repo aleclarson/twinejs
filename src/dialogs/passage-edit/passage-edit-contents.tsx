@@ -122,6 +122,7 @@ export const PassageEditContents: React.FC<
 					story={story}
 					storyFormat={storyFormat}
 					storyFormatExtensionsDisabled={!storyFormatExtensionsEnabled}
+					toolbarItems={toolbarItems}
 				/>
 			</ErrorBoundary>
 		</div>
