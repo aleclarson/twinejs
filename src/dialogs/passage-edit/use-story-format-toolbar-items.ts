@@ -61,5 +61,5 @@ export function useStoryFormatToolbarItems(
 		}
 	}, [editor, refreshToolbarItems]);
 
-	return [toolbarItems, setToolbarItems];
+	return [toolbarItems, refreshToolbarItems];
 }

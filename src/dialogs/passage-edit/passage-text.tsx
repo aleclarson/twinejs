@@ -1,10 +1,15 @@
 import * as React from 'react';
+import {jaroWinkler} from '@skyra/jaro-winkler';
 import {useTranslation} from 'react-i18next';
 import {DialogEditor} from '../../components/container/dialog-card';
 import {CodeArea} from '../../components/control/code-area';
 import {usePrefsContext} from '../../store/prefs';
 import {Passage, Story} from '../../store/stories';
-import {StoryFormat} from '../../store/story-formats';
+import {
+	StoryFormat,
+	StoryFormatToolbarButton,
+	StoryFormatToolbarItem
+} from '../../store/story-formats';
 import {useCodeMirrorPassageHints} from '../../store/use-codemirror-passage-hints';
 import {useFormatCodeMirrorMode} from '../../store/use-format-codemirror-mode';
 import {codeMirrorOptionsFromPrefs} from '../../util/codemirror-options';
@@ -15,11 +20,12 @@ export interface PassageTextProps {
 	disabled?: boolean;
 	onChange: (value: string) => void;
 	onEditorChange: (value: CodeMirror.Editor) => void;
+	onExecCommand: (command: string, ...args: any[]) => void;
 	passage: Passage;
 	story: Story;
 	storyFormat: StoryFormat;
 	storyFormatExtensionsDisabled?: boolean;
-	toolbarItems: any[]; // Add this line
+	toolbarItems: StoryFormatToolbarItem[];
 }
 
 export const PassageText: React.FC<PassageTextProps> = props => {
@@ -27,11 +33,12 @@ export const PassageText: React.FC<PassageTextProps> = props => {
 		disabled,
 		onChange,
 		onEditorChange,
+		onExecCommand,
 		passage,
 		story,
 		storyFormat,
 		storyFormatExtensionsDisabled,
-		toolbarItems // Add this line
+		toolbarItems
 	} = props;
 	const [localText, setLocalText] = React.useState(passage.text);
 	const {prefs} = usePrefsContext();
@@ -136,42 +143,95 @@ export const PassageText: React.FC<PassageTextProps> = props => {
 		[onEditorChange]
 	);
 
-	const handleSlashPrefix = React.useCallback((editor: CodeMirror.Editor) => {
-		// Implement custom behavior for the "/" prefix here
-		console.log('Slash prefix triggered');
-		editor.showHint({
-			completeSingle: false,
-			hint() {
-				const wordRange = editor.findWordAt(editor.getCursor());
-				const completions = {
-					list: toolbarItems.map(item => item.name), // Use toolbarItems here
-					from: wordRange.anchor,
-					to: wordRange.head
-				};
+	const handleSlashPrefix = React.useCallback(
+		(editor: CodeMirror.Editor) => {
+			// Implement custom behavior for the "/" prefix here
+			console.log('Slash prefix triggered');
 
-				CodeMirror.on(completions, 'pick', (...args: any[]) => {
-					console.log('pick', ...args);
-				});
+			const toolbarButtons = toolbarItems.flatMap(item =>
+				item.type === 'menu'
+					? item.items.filter(
+							(subItem): subItem is StoryFormatToolbarButton =>
+								subItem.type !== 'separator'
+					  )
+					: item
+			);
 
-				return completions;
-			}
-		});
-	}, [toolbarItems]); // Add toolbarItems to the dependency array
+			editor.showHint({
+				completeSingle: false,
+				hint(): CodeMirror.Hints {
+					const wordRange = editor.findWordAt(editor.getCursor());
+					const word = editor
+						.getRange(wordRange.anchor, wordRange.head)
+						.toLowerCase();
+
+					let buttons = toolbarButtons.filter(button => !button.disabled);
+					if (word !== '/') {
+						const rankedToolbarButtons = buttons.map(button => ({
+							...button,
+							score: button.label
+								.toLowerCase()
+								.split(' ')
+								.reduce((acc, curr) => {
+									return Math.max(acc, jaroWinkler(word, curr));
+								}, 0)
+						}));
+
+						rankedToolbarButtons.sort((a, b) => b.score - a.score);
+
+						// As a match becomes more certain, we should only show
+						// buttons that are more certain.
+						buttons =
+							rankedToolbarButtons[0].score >= 0.8
+								? rankedToolbarButtons.filter(button => button.score >= 0.8)
+								: rankedToolbarButtons[0].score >= 0.6
+								? rankedToolbarButtons.filter(button => button.score >= 0.6)
+								: rankedToolbarButtons;
+					}
+
+					return {
+						list: buttons.map(button => ({
+							text: button.label,
+							hint() {
+								const doc = editor.getDoc();
+								if (word !== '/') {
+									wordRange.anchor.ch--;
+								}
+								doc.replaceRange('', wordRange.anchor, wordRange.head);
+								onExecCommand(button.command);
+							}
+						})),
+						from: wordRange.anchor,
+						to: wordRange.head
+					};
+				}
+			});
+		},
+		[toolbarItems, onExecCommand]
+	);
+
+	const handleSlashPrefixRef = React.useRef(handleSlashPrefix);
+
+	React.useEffect(() => {
+		handleSlashPrefixRef.current = handleSlashPrefix;
+	}, [handleSlashPrefix]);
 
 	const handlePrefix = React.useCallback(
 		(editor: CodeMirror.Editor) => {
 			const cursor = editor.getCursor();
 			const isSlash =
-				cursor.ch === 1 &&
 				editor.getRange({line: cursor.line, ch: cursor.ch - 1}, cursor) === '/';
 
 			if (isSlash) {
-				handleSlashPrefix(editor);
+				// Ignore slash if not at the start of a line.
+				if (cursor.ch === 1) {
+					handleSlashPrefixRef.current(editor);
+				}
 			} else {
 				autocompletePassageNames(editor);
 			}
 		},
-		[autocompletePassageNames, handleSlashPrefix]
+		[autocompletePassageNames]
 	);
 
 	const options = React.useMemo(
@@ -197,7 +257,6 @@ export const PassageText: React.FC<PassageTextProps> = props => {
 	);
 
 	const hotReloadKey = React.useMemo(() => Date.now(), []);
-	console.log('hotReloadKey', hotReloadKey);
 
 	return (
 		<DialogEditor>
