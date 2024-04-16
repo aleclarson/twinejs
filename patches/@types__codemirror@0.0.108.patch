@@ -1,0 +1,50 @@
+diff --git a/index.d.ts b/index.d.ts
+index f3ac0ac7b03991e9974dd8eb5110d43c54a243ec..b49a79796ab611ba1f7194f48ac7f7d1829b3c90 100644
+--- a/index.d.ts
++++ b/index.d.ts
+@@ -212,6 +212,36 @@ declare namespace CodeMirror {
+         [keyName: string]: false | string | ((instance: Editor) => void | typeof Pass);
+     }
+ 
++    interface KeyLookup {
++        /**
++         * Handle a keypress dynamically.
++         *
++         * Possible return values:
++         * - Return a string to run a command by name.
++         * - Return `"..."` to continue a multi-key sequence.
++         * - Return a function to run a custom command once the previous input has
++         * been read; it may return `CodeMirror.Pass` to continue the search for a
++         * handler.
++         * - Return `false` to ignore the keypress (stop searching for a handler).
++         */
++        call(
++            key: string,
++            instance: Editor
++        ):
++            | '...'
++            | keyof CommandActions
++            | ((instance: Editor) => typeof Pass | void)
++            | false
++            | void;
++        /**
++         * If the lookup fails, continue the lookup with one or many `extraKeys`
++         * values.
++         */
++        fallthrough?:
++        | EditorConfiguration['extraKeys']
++        | EditorConfiguration['extraKeys'][];
++    }
++
+     /** Methods prefixed with doc. can, unless otherwise specified, be called both on CodeMirror (editor) instances and
+     CodeMirror.Doc instances. Thus, the Editor interface extends Doc. **/
+     interface Editor extends Doc {
+@@ -1113,7 +1143,7 @@ declare namespace CodeMirror {
+         keyMap?: string;
+ 
+         /** Can be used to specify extra keybindings for the editor, alongside the ones defined by keyMap. Should be either null, or a valid keymap value. */
+-        extraKeys?: string | KeyMap;
++        extraKeys?: string | KeyMap | KeyLookup;
+ 
+         /** Allows you to configure the behavior of mouse selection and dragging. The function is called when the left mouse button is pressed. */
+         configureMouse?: (

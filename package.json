@@ -145,5 +145,10 @@
 		}
 	},
 	"homepage": "./",
-	"main": "electron-build/electron/src/electron/main-process/index.js"
+	"main": "electron-build/electron/src/electron/main-process/index.js",
+	"pnpm": {
+		"patchedDependencies": {
+			"@types/codemirror@0.0.108": "patches/@types__codemirror@0.0.108.patch"
+		}
+	}
 }
