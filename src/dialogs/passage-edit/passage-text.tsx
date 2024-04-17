@@ -1,5 +1,7 @@
 import * as React from 'react';
 import {jaroWinkler} from '@skyra/jaro-winkler';
+import {jaroWinkler} from '@skyra/jaro-winkler';
+import {VariableMap} from '../../routes/story-edit/use-parsed-passage-variables';
 import {useTranslation} from 'react-i18next';
 import {DialogEditor} from '../../components/container/dialog-card';
 import {CodeArea} from '../../components/control/code-area';
@@ -26,6 +28,7 @@ export interface PassageTextProps {
 	storyFormat: StoryFormat;
 	storyFormatExtensionsDisabled?: boolean;
 	toolbarItems: StoryFormatToolbarItem[];
+	variableMap?: VariableMap;
 }
 
 export const PassageText: React.FC<PassageTextProps> = props => {
@@ -38,7 +41,8 @@ export const PassageText: React.FC<PassageTextProps> = props => {
 		story,
 		storyFormat,
 		storyFormatExtensionsDisabled,
-		toolbarItems
+		toolbarItems,
+		variableMap
 	} = props;
 	const [localText, setLocalText] = React.useState(passage.text);
 	const {prefs} = usePrefsContext();
@@ -207,6 +211,40 @@ export const PassageText: React.FC<PassageTextProps> = props => {
 		[toolbarItems, onExecCommand]
 	);
 
+	const handleAtPrefix = useStableCallback(
+		(editor: CodeMirror.Editor) => {
+			if (!variableMap) {
+				return;
+			}
+
+			const wordRange = editor.findWordAt(editor.getCursor());
+			const word = editor
+				.getRange(wordRange.anchor, wordRange.head)
+				.slice(1)
+				.toLowerCase();
+
+			const rankedVariableNames = Object.keys(variableMap).map(name => ({
+				name,
+				score: jaroWinkler(word, name.toLowerCase())
+			}));
+
+			rankedVariableNames.sort((a, b) => b.score - a.score);
+
+			editor.showHint({
+				completeSingle: false,
+				hint: () => ({
+					list: rankedVariableNames.map(({name}) => ({
+						text: name,
+						render: () => `@${name}`
+					})),
+					from: wordRange.anchor,
+					to: wordRange.head
+				})
+			});
+		},
+		[variableMap]
+	);
+
 	const handlePrefix = React.useCallback(
 		(editor: CodeMirror.Editor) => {
 			const cursor = editor.getCursor();
@@ -219,6 +257,10 @@ export const PassageText: React.FC<PassageTextProps> = props => {
 					handleSlashPrefix(editor);
 				}
 			} else {
+				const isAt =
+					editor.getRange({line: cursor.line, ch: cursor.ch - 1}, cursor) ===
+					'@';
+				if (isAt) handleAtPrefix(editor);
 				autocompletePassageNames(editor);
 			}
 		},
