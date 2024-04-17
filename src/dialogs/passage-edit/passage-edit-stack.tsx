@@ -18,6 +18,7 @@ import {VisibleWhitespace} from '../../components/visible-whitespace';
 
 export interface PassageEditStackProps extends DialogComponentProps {
 	passageIds: string[];
+	variableMap: Map<string, Map<string, string>>;
 	storyId: string;
 }
 
@@ -80,6 +81,7 @@ const InnerPassageEditStack: React.FC<PassageEditStackProps> = props => {
 									disabled
 									passageId={passageId}
 									storyId={storyId}
+									variableMap={props.variableMap.get(passageId)}
 								/>
 							</BackgroundDialogCard>
 						);
@@ -96,7 +98,11 @@ const InnerPassageEditStack: React.FC<PassageEditStackProps> = props => {
 							maximizable
 							onClose={event => handleClose(passageId, event)}
 						>
-							<PassageEditContents passageId={passageId} storyId={storyId} />
+							<PassageEditContents
+								passageId={passageId}
+								storyId={storyId}
+								variableMap={props.variableMap.get(passageId)}
+							/>
 						</DialogCard>
 					);
 				})}

@@ -18,6 +18,7 @@ import {useStoryFormatToolbarItems} from './use-story-format-toolbar-items';
 export interface PassageEditContentsProps {
 	disabled?: boolean;
 	passageId: string;
+	variableMap?: Map<string, string>;
 	storyId: string;
 }
 
@@ -25,7 +26,7 @@ export const PassageEditContents: React.FC<
 	PassageEditContentsProps
 > = props => {
 	const {disabled, passageId, storyId} = props;
-	const [storyFormatExtensionsEnabled, setStoryFormatExtensionsEnabled] =
+	const [storyFormatExtensionsEnabled, setStoryFormatExtensionsEnabled] = 
 		React.useState(true);
 	const [editorCrashed, setEditorCrashed] = React.useState(false);
 	const [cmEditor, setCmEditor] = React.useState<CodeMirror.Editor>();

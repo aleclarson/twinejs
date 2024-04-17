@@ -7,7 +7,11 @@ import {
 	selectPassage,
 	selectPassagesInRect,
 	Story
-} from '../../store/stories';
+} from '../../store/stories'; 
+import {
+	PassageEditStackProps,
+	PassageEditStack
+} from '../../dialogs/passage-edit/passage-edit-stack';
 import {useUndoableStoriesContext} from '../../store/undoable-stories';
 import {Point, Rect} from '../../util/geometry';
 
@@ -56,7 +60,10 @@ export function usePassageChangeHandlers(story: Story) {
 	const handleEditPassage = React.useCallback(
 		(passage: Passage) =>
 			dialogsDispatch(addPassageEditors(story.id, [passage.id])),
-		[dialogsDispatch, story.id]
+		[dialogsDispatch, story.id, variableMap]
+	);
+
+	const passageEditStackProps: PassageEditStackProps = {variableMap};
 	);
 
 	const handleSelectPassage = React.useCallback(
@@ -88,6 +95,7 @@ export function usePassageChangeHandlers(story: Story) {
 		[selectedPassages, story, undoableStoriesDispatch]
 	);
 
+
 	return {
 		handleDeselectPassage,
 		handleDragPassages,
@@ -95,4 +103,5 @@ export function usePassageChangeHandlers(story: Story) {
 		handleSelectPassage,
 		handleSelectRect
 	};
+	return {passageEditStackProps};
 }

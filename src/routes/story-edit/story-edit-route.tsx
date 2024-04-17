@@ -15,6 +15,7 @@ import {useInitialPassageCreation} from './use-initial-passage-creation';
 import {usePassageChangeHandlers} from './use-passage-change-handlers';
 import {useViewCenter} from './use-view-center';
 import {useZoomShortcuts} from './use-zoom-shortcuts';
+import {useParsedPassageVariables} from './use-parsed-passage-variables';
 import {useZoomTransition} from './use-zoom-transition';
 import './story-edit-route.css';
 
@@ -22,6 +23,7 @@ export const InnerStoryEditRoute: React.FC = () => {
 	const {storyId} = useParams<{storyId: string}>();
 	const {stories} = useUndoableStoriesContext();
 	const story = storyWithId(stories, storyId);
+	const variableMap = useParsedPassageVariables(story.passages);
 	const [fuzzyFinderOpen, setFuzzyFinderOpen] = React.useState(false);
 	const mainContent = React.useRef<HTMLDivElement>(null);
 	const {getCenter, setCenter} = useViewCenter(story, mainContent);
@@ -31,7 +33,8 @@ export const InnerStoryEditRoute: React.FC = () => {
 		handleEditPassage,
 		handleSelectPassage,
 		handleSelectRect
-	} = usePassageChangeHandlers(story);
+	} = usePassageChangeHandlers(story, variableMap);
+
 	const visibleZoom = useZoomTransition(story.zoom, mainContent.current);
 
 	useZoomShortcuts(story);
