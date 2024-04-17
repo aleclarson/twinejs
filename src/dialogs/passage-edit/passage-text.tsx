@@ -246,7 +246,60 @@ export const PassageText: React.FC<PassageTextProps> = props => {
 			},
 			extraKeys: {
 				call(key, cm) {
-					console.log('Key pressed:', JSON.stringify(key));
+					if (key === 'Tab' || key === 'Shift-Tab') {
+						const reverse = key === 'Shift-Tab';
+
+						let firstMarkIndex = -1;
+						let lastMarkIndex = -1;
+						let previousMarkIndex = -1;
+						let nextMarkIndex = -1;
+
+						const cursor = cm.getCursor();
+						const marks = cm.getAllMarks();
+						marks.forEach((mark, index) => {
+							const markerRange = mark.find() as CodeMirror.MarkerRange;
+							const {line, ch} = reverse ? markerRange.to : markerRange.from;
+
+							if (
+								line < cursor.line ||
+								(line === cursor.line && ch < cursor.ch)
+							) {
+								if (firstMarkIndex === -1) {
+									firstMarkIndex = index;
+								}
+								previousMarkIndex = index;
+							} else {
+								if (lastMarkIndex === -1) {
+									nextMarkIndex = index;
+								}
+								lastMarkIndex = index;
+							}
+						});
+
+						if (reverse) {
+							nextMarkIndex = previousMarkIndex;
+							firstMarkIndex = lastMarkIndex;
+						}
+
+						if (nextMarkIndex === -1) {
+							nextMarkIndex = firstMarkIndex;
+							if (nextMarkIndex === -1) {
+								return;
+							}
+						}
+
+						const nextPlaceholder = marks
+							.slice(nextMarkIndex)
+							.find(mark => mark.className === 'placeholder');
+
+						// Select the placeholder mark.
+						const placeholderElement = nextPlaceholder?.replacedWith;
+						if (placeholderElement) {
+							return () => {
+								placeholderElement.click();
+							};
+						}
+					}
 				},
 				fallthrough: undefined
 			},

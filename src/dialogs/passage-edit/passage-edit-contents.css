@@ -7,3 +7,26 @@
 .passage-edit-contents .tags {
 	padding: var(--grid-size);
 }
+
+.passage-edit-contents .placeholder {
+	color: var(--light-gray);
+	font-style: italic;
+}
+
+.passage-edit-contents .placeholder[data-selected='1'] {
+	color: var(--dark-blue);
+	animation: placeholder-pulse 1s infinite;
+}
+
+/* Animate opacity in and out in an infinite loop */
+@keyframes placeholder-pulse {
+	0% {
+		color: var(--dark-blue);
+	}
+	50% {
+		color: var(--blue);
+	}
+	100% {
+		color: var(--dark-blue);
+	}
+}

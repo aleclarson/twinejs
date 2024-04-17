@@ -69,27 +69,36 @@ export const PassageEditContents: React.FC<
 		[dispatch, passage, story]
 	);
 
-	function handleExecCommand(name: string) {
-		// A format toolbar command probably will affect the editor content. It
-		// appears that react-codemirror2 can't maintain the selection properly in
-		// all cases when this happens (particularly when using
-		// `replaceSelection('something', 'around')`), so we take a snapshot
-		// immediately after the command runs, let react-codemirror2 work, then
-		// reapply the selection ASAP.
+	const handleExecCommand = React.useCallback(
+		(name: string) => {
+			// A format toolbar command probably will affect the editor content. It
+			// appears that react-codemirror2 can't maintain the selection properly in
+			// all cases when this happens (particularly when using
+			// `replaceSelection('something', 'around')`), so we take a snapshot
+			// immediately after the command runs, let react-codemirror2 work, then
+			// reapply the selection ASAP.
 
-		if (!cmEditor) {
-			throw new Error('No editor set');
-		}
+			if (!cmEditor) {
+				throw new Error('No editor set');
+			}
 
-		cmEditor.execCommand(name);
+			cmEditor.execCommand(name);
 
-		const selections = cmEditor.listSelections();
+			const selections = cmEditor.listSelections();
 
-		Promise.resolve().then(() => {
-			cmEditor.setSelections(selections);
-			refreshToolbarItems();
-		});
-	}
+			Promise.resolve().then(() => {
+				cmEditor.setSelections(selections);
+				renderTabPlaceholders(cmEditor, true);
+				refreshToolbarItems();
+			});
+		},
+		[cmEditor, renderTabPlaceholders, refreshToolbarItems]
+	);
+
+	const onEditorChange = React.useCallback((editor: CodeMirror.Editor) => {
+		setCmEditor(editor);
+		renderTabPlaceholders(editor);
+	}, []);
 
 	if (editorCrashed) {
 		return (
@@ -117,7 +126,7 @@ export const PassageEditContents: React.FC<
 				<PassageText
 					disabled={disabled}
 					onChange={handlePassageTextChange}
-					onEditorChange={setCmEditor}
+					onEditorChange={onEditorChange}
 					passage={passage}
 					story={story}
 					storyFormat={storyFormat}
@@ -129,3 +138,76 @@ export const PassageEditContents: React.FC<
 		</div>
 	);
 };
+
+// Look for placeholder syntax like ${1:placeholder} and
+// replace them with element marks
+function renderTabPlaceholders(
+	editor: CodeMirror.Editor,
+	focusFirst?: boolean
+) {
+	let firstPlaceholder: HTMLElement | undefined;
+
+	const doc = editor.getDoc();
+	doc.eachLine(line => {
+		const lineNumber = doc.getLineNumber(line)!;
+		const placeholderRegex = /\${(\d+):([^}]+)}/g;
+
+		let match;
+		while ((match = placeholderRegex.exec(line.text)) !== null) {
+			const from = {
+				line: lineNumber,
+				ch: match.index
+			};
+			const to = {
+				line: lineNumber,
+				ch: from.ch + match[0].length
+			};
+
+			const placeholder = document.createElement('span');
+			firstPlaceholder ??= placeholder;
+			placeholder.className = 'placeholder';
+			placeholder.textContent = match[2];
+
+			const setSelected = (selected: boolean) => {
+				const value = selected ? '1' : '0';
+				if (value !== placeholder.dataset.selected) {
+					placeholder.dataset.selected = value;
+				}
+			};
+
+			setSelected(false);
+
+			placeholder.addEventListener('click', () => {
+				doc.setSelection(from, to);
+			});
+
+			const marker = doc.markText(from, to, {
+				className: 'placeholder',
+				replacedWith: placeholder,
+				handleMouseEvents: true
+			});
+
+			const onSelectionChange = (
+				editor: CodeMirror.Editor,
+				selection: CodeMirror.EditorSelectionChange
+			) => {
+				setSelected(
+					selection.ranges.length === 1 &&
+						selection.ranges[0].anchor.line === from.line &&
+						selection.ranges[0].anchor.ch === from.ch
+				);
+			};
+
+			editor.on('beforeSelectionChange', onSelectionChange);
+			marker.on('clear', () => {
+				editor.off('beforeSelectionChange', onSelectionChange);
+			});
+		}
+	});
+
+	if (focusFirst) {
+		Promise.resolve().then(() => {
+			firstPlaceholder?.click();
+		});
+	}
+}
