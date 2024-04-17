@@ -28,6 +28,7 @@ export function useStoryFormatToolbarItems(
 			try {
 				const style = window.getComputedStyle(editor.getWrapperElement());
 
+				console.log('refreshing toolbar items');
 				setToolbarItems(
 					toolbarFactory(editor, {
 						appTheme,

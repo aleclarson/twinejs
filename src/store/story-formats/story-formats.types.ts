@@ -79,6 +79,9 @@ export interface StoryFormatProperties {
 				references?: {
 					parsePassageText?: (text: string) => string[];
 				};
+				declarations?: {
+					parsePassageText?: (text: string) => string[];
+				};
 			};
 		};
 	};
