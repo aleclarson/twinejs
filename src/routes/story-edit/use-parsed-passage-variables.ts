@@ -1,6 +1,8 @@
 import * as React from 'react';
 import {Passage} from '../../store/stories';
 import {useStoryFormatsContext} from '../../store/story-formats';
+import {formatWithNameAndVersion} from '../../store/story-formats/getters';
+import {useFormatEditorExtensions} from '../../store/use-format-editor-extensions';
 
 export function useParsedPassageVariables(passages: Passage[]) {
 	const {formats} = useStoryFormatsContext();
@@ -8,26 +10,34 @@ export function useParsedPassageVariables(passages: Passage[]) {
 		Map<string, Map<string, string>>
 	>(new Map());
 
+	const currentFormat = React.useMemo(
+		() =>
+			formatWithNameAndVersion(
+				formats,
+				passages[0].storyFormat,
+				passages[0].storyFormatVersion
+			),
+		[formats, passages]
+	);
+
+	const {editorExtensions} = useFormatEditorExtensions(currentFormat);
+
 	React.useEffect(() => {
-		const newVariableMap = new Map<string, Map<string, string>>();
+		const parsePassageText =
+			editorExtensions?.twine?.[currentFormat.version]?.declarations
+				?.parsePassageText;
 
 		for (const passage of passages) {
-			const format = formats.find(
-				format =>
-					format.name === passage.storyFormat &&
-					format.version === passage.storyFormatVersion
-			);
-
-			if (format?.declarations?.parsePassageText) {
-				newVariableMap.set(
-					passage.id,
-					format.declarations.parsePassageText(passage.text)
-				);
+			if (parsePassageText) {
+				variableMap.set(passage.id, new Map(parsePassageText(passage.text)));
 			}
 		}
-
-		setVariableMap(newVariableMap);
-	}, [formats, passages]);
+	}, [
+		currentFormat,
+		editorExtensions,
+		passages,
+		variableMap,
+	]);
 
 	return variableMap;
 }
