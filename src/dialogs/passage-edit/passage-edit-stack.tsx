@@ -15,10 +15,11 @@ import {DialogComponentProps} from '../dialogs.types';
 import {PassageEditContents} from './passage-edit-contents';
 import './passage-edit-stack.css';
 import {VisibleWhitespace} from '../../components/visible-whitespace';
+import {VariableMap} from '../../routes/story-edit/use-parsed-passage-variables';
 
 export interface PassageEditStackProps extends DialogComponentProps {
 	passageIds: string[];
-	variableMap: Map<string, Map<string, string>>;
+	variableMap: VariableMap;
 	storyId: string;
 }
 
@@ -74,14 +75,16 @@ const InnerPassageEditStack: React.FC<PassageEditStackProps> = props => {
 								key={passageId}
 								onClose={event => handleClose(passageId, event)}
 								onRaise={() =>
-									dispatch(addPassageEditors(storyId, [passageId]))
+									dispatch(
+										addPassageEditors(storyId, [passageId], props.variableMap)
+									)
 								}
 							>
 								<PassageEditContents
 									disabled
 									passageId={passageId}
 									storyId={storyId}
-									variableMap={props.variableMap.get(passageId)}
+									variableMap={props.variableMap}
 								/>
 							</BackgroundDialogCard>
 						);
@@ -101,7 +104,7 @@ const InnerPassageEditStack: React.FC<PassageEditStackProps> = props => {
 							<PassageEditContents
 								passageId={passageId}
 								storyId={storyId}
-								variableMap={props.variableMap.get(passageId)}
+								variableMap={props.variableMap}
 							/>
 						</DialogCard>
 					);

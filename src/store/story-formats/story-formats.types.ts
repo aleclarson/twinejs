@@ -58,6 +58,19 @@ export type StoryFormatToolbarFactory = (
 	environment: StoryFormatToolbarFactoryEnvironment
 ) => StoryFormatToolbarItem[];
 
+export type StoryFormatVariableReference = {
+	/** The name of the variable. */
+	name: string;
+	/** Where in the passage text the variable was found. */
+	position: {line: number; ch: number};
+	/** The expression used to update the variable. */
+	expression?: string;
+	/** The type of the variable. */
+	expressionType?: string;
+	/** If true, the variable is local to the passage. */
+	local?: boolean;
+};
+
 /**
  * Properties available once a story format is loaded. Note that some there is
  * some overlap between this and StoryFormat--this is so that we know certain
@@ -79,8 +92,8 @@ export interface StoryFormatProperties {
 				references?: {
 					parsePassageText?: (text: string) => string[];
 				};
-				declarations?: {
-					parsePassageText?: (text: string) => string[];
+				variables?: {
+					parsePassageText?: (text: string) => StoryFormatVariableReference[];
 				};
 			};
 		};

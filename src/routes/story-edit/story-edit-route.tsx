@@ -18,12 +18,25 @@ import {useZoomShortcuts} from './use-zoom-shortcuts';
 import {useParsedPassageVariables} from './use-parsed-passage-variables';
 import {useZoomTransition} from './use-zoom-transition';
 import './story-edit-route.css';
+import {
+	formatWithNameAndVersion,
+	useStoryFormatsContext
+} from '../../store/story-formats';
 
 export const InnerStoryEditRoute: React.FC = () => {
 	const {storyId} = useParams<{storyId: string}>();
 	const {stories} = useUndoableStoriesContext();
 	const story = storyWithId(stories, storyId);
-	const variableMap = useParsedPassageVariables(story.passages);
+
+	const {formats} = useStoryFormatsContext();
+	const format = formatWithNameAndVersion(
+		formats,
+		story.storyFormat,
+		story.storyFormatVersion
+	);
+
+	const variableMap = useParsedPassageVariables(format, story.passages);
+
 	const [fuzzyFinderOpen, setFuzzyFinderOpen] = React.useState(false);
 	const mainContent = React.useRef<HTMLDivElement>(null);
 	const {getCenter, setCenter} = useViewCenter(story, mainContent);

@@ -1,21 +1,21 @@
 import * as React from 'react';
 import {addPassageEditors, useDialogsContext} from '../../dialogs';
 import {
+	Passage,
+	Story,
 	deselectPassage,
 	movePassages,
-	Passage,
 	selectPassage,
-	selectPassagesInRect,
-	Story
-} from '../../store/stories'; 
-import {
-	PassageEditStackProps,
-	PassageEditStack
-} from '../../dialogs/passage-edit/passage-edit-stack';
+	selectPassagesInRect
+} from '../../store/stories';
 import {useUndoableStoriesContext} from '../../store/undoable-stories';
 import {Point, Rect} from '../../util/geometry';
+import {VariableMap} from './use-parsed-passage-variables';
 
-export function usePassageChangeHandlers(story: Story) {
+export function usePassageChangeHandlers(
+	story: Story,
+	variableMap: VariableMap
+) {
 	const selectedPassages = React.useMemo(
 		() => story.passages.filter(passage => passage.selected),
 		[story.passages]
@@ -59,11 +59,8 @@ export function usePassageChangeHandlers(story: Story) {
 
 	const handleEditPassage = React.useCallback(
 		(passage: Passage) =>
-			dialogsDispatch(addPassageEditors(story.id, [passage.id])),
+			dialogsDispatch(addPassageEditors(story.id, [passage.id], variableMap)),
 		[dialogsDispatch, story.id, variableMap]
-	);
-
-	const passageEditStackProps: PassageEditStackProps = {variableMap};
 	);
 
 	const handleSelectPassage = React.useCallback(
@@ -95,7 +92,6 @@ export function usePassageChangeHandlers(story: Story) {
 		[selectedPassages, story, undoableStoriesDispatch]
 	);
 
-
 	return {
 		handleDeselectPassage,
 		handleDragPassages,
@@ -103,5 +99,4 @@ export function usePassageChangeHandlers(story: Story) {
 		handleSelectPassage,
 		handleSelectRect
 	};
-	return {passageEditStackProps};
 }

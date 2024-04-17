@@ -14,19 +14,20 @@ import {StoryFormatToolbar} from './story-format-toolbar';
 import {TagToolbar} from './tag-toolbar';
 import './passage-edit-contents.css';
 import {useStoryFormatToolbarItems} from './use-story-format-toolbar-items';
+import {VariableMap} from '../../routes/story-edit/use-parsed-passage-variables';
 
 export interface PassageEditContentsProps {
 	disabled?: boolean;
 	passageId: string;
-	variableMap?: Map<string, string>;
 	storyId: string;
+	variableMap?: VariableMap;
 }
 
 export const PassageEditContents: React.FC<
 	PassageEditContentsProps
 > = props => {
 	const {disabled, passageId, storyId} = props;
-	const [storyFormatExtensionsEnabled, setStoryFormatExtensionsEnabled] = 
+	const [storyFormatExtensionsEnabled, setStoryFormatExtensionsEnabled] =
 		React.useState(true);
 	const [editorCrashed, setEditorCrashed] = React.useState(false);
 	const [cmEditor, setCmEditor] = React.useState<CodeMirror.Editor>();
