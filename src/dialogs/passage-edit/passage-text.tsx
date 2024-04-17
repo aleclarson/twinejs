@@ -143,11 +143,8 @@ export const PassageText: React.FC<PassageTextProps> = props => {
 		[onEditorChange]
 	);
 
-	const handleSlashPrefix = React.useCallback(
+	const handleSlashPrefix = useStableCallback(
 		(editor: CodeMirror.Editor) => {
-			// Implement custom behavior for the "/" prefix here
-			console.log('Slash prefix triggered');
-
 			const toolbarButtons = toolbarItems.flatMap(item =>
 				item.type === 'menu'
 					? item.items.filter(
@@ -210,12 +207,6 @@ export const PassageText: React.FC<PassageTextProps> = props => {
 		[toolbarItems, onExecCommand]
 	);
 
-	const handleSlashPrefixRef = React.useRef(handleSlashPrefix);
-
-	React.useEffect(() => {
-		handleSlashPrefixRef.current = handleSlashPrefix;
-	}, [handleSlashPrefix]);
-
 	const handlePrefix = React.useCallback(
 		(editor: CodeMirror.Editor) => {
 			const cursor = editor.getCursor();
@@ -225,7 +216,7 @@ export const PassageText: React.FC<PassageTextProps> = props => {
 			if (isSlash) {
 				// Ignore slash if not at the start of a line.
 				if (cursor.ch === 1) {
-					handleSlashPrefixRef.current(editor);
+					handleSlashPrefix(editor);
 				}
 			} else {
 				autocompletePassageNames(editor);
@@ -328,3 +319,18 @@ export const PassageText: React.FC<PassageTextProps> = props => {
 		</DialogEditor>
 	);
 };
+
+function useStableCallback<T extends (...args: any[]) => any>(
+	callback: T,
+	deps: React.DependencyList
+) {
+	const ref = React.useRef<T>();
+	React.useEffect(() => {
+		ref.current = callback;
+	}, deps);
+
+	return React.useCallback(
+		(...args: Parameters<T>) => ref.current?.(...args),
+		[]
+	);
+}
