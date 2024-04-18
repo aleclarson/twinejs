@@ -10,32 +10,20 @@ import {
 } from '../../store/undoable-stories';
 import {MarqueeablePassageMap} from './marqueeable-passage-map';
 import {PassageFuzzyFinder} from './passage-fuzzy-finder';
+import './story-edit-route.css';
 import {StoryEditToolbar} from './toolbar';
 import {useInitialPassageCreation} from './use-initial-passage-creation';
+import {useParsedPassageVariables} from './use-parsed-passage-variables';
 import {usePassageChangeHandlers} from './use-passage-change-handlers';
 import {useViewCenter} from './use-view-center';
 import {useZoomShortcuts} from './use-zoom-shortcuts';
-import {useParsedPassageVariables} from './use-parsed-passage-variables';
 import {useZoomTransition} from './use-zoom-transition';
-import './story-edit-route.css';
-import {
-	formatWithNameAndVersion,
-	useStoryFormatsContext
-} from '../../store/story-formats';
 
 export const InnerStoryEditRoute: React.FC = () => {
 	const {storyId} = useParams<{storyId: string}>();
 	const {stories} = useUndoableStoriesContext();
 	const story = storyWithId(stories, storyId);
-
-	const {formats} = useStoryFormatsContext();
-	const format = formatWithNameAndVersion(
-		formats,
-		story.storyFormat,
-		story.storyFormatVersion
-	);
-
-	const variableMap = useParsedPassageVariables(format, story.passages);
+	const variableMap = useParsedPassageVariables(story);
 
 	const [fuzzyFinderOpen, setFuzzyFinderOpen] = React.useState(false);
 	const mainContent = React.useRef<HTMLDivElement>(null);
@@ -60,6 +48,7 @@ export const InnerStoryEditRoute: React.FC = () => {
 				getCenter={getCenter}
 				onOpenFuzzyFinder={() => setFuzzyFinderOpen(true)}
 				story={story}
+				variableMap={variableMap}
 			/>
 			<MainContent grabbable padded={false} ref={mainContent}>
 				<MarqueeablePassageMap

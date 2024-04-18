@@ -1,7 +1,7 @@
 import {Thunk} from 'react-hook-thunk-reducer';
 import {DialogsAction, DialogsState} from '../dialogs.types';
 import {PassageEditStack} from '../passage-edit';
-import {VariableMap} from '../../routes/story-edit/use-parsed-passage-variables';
+import {StoryFormatVariableMap} from '../../routes/story-edit/use-parsed-passage-variables';
 
 /**
  * Adds a passage editor dialog, either creating a new stack for it or adding it
@@ -10,7 +10,7 @@ import {VariableMap} from '../../routes/story-edit/use-parsed-passage-variables'
 export function addPassageEditors(
 	storyId: string,
 	passageIds: string[],
-	variableMap: VariableMap,
+	variableMap: StoryFormatVariableMap,
 	editorLimit = 6
 ): Thunk<DialogsState, DialogsAction> {
 	return (dispatch, state) => {

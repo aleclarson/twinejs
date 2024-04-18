@@ -10,11 +10,11 @@ import {
 } from '../../store/stories';
 import {useUndoableStoriesContext} from '../../store/undoable-stories';
 import {Point, Rect} from '../../util/geometry';
-import {VariableMap} from './use-parsed-passage-variables';
+import {StoryFormatVariableMap} from './use-parsed-passage-variables';
 
 export function usePassageChangeHandlers(
 	story: Story,
-	variableMap: VariableMap
+	variableMap: StoryFormatVariableMap
 ) {
 	const selectedPassages = React.useMemo(
 		() => story.passages.filter(passage => passage.selected),

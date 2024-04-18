@@ -1,13 +1,9 @@
 import CodeMirror from 'codemirror';
 import * as React from 'react';
-import {
-	formatWithNameAndVersion,
-	loadFormatProperties,
-	useStoryFormatsContext
-} from './story-formats';
+import {getAppInfo} from '../util/app-info';
 import {formatEditorExtensions, namespaceForFormat} from '../util/story-format';
 import {formatEditorExtensionsDisabled, usePrefsContext} from './prefs';
-import {getAppInfo} from '../util/app-info';
+import {loadFormatProperties, useStoryFormat} from './story-formats';
 
 /**
  * Sets up a CodeMirror mode for a format, if the format has defined one via
@@ -19,8 +15,7 @@ export function useFormatCodeMirrorMode(
 	formatName: string,
 	formatVersion: string
 ) {
-	const {dispatch, formats} = useStoryFormatsContext();
-	const format = formatWithNameAndVersion(formats, formatName, formatVersion);
+	const {dispatch, format} = useStoryFormat(formatName, formatVersion);
 	const {prefs} = usePrefsContext();
 	const [modeName, setModeName] = React.useState<string>();
 	const extensionsDisabled = formatEditorExtensionsDisabled(

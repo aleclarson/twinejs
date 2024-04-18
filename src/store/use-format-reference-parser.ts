@@ -14,8 +14,11 @@ export function useFormatReferenceParser(
 ) {
 	const {dispatch, formats} = useStoryFormatsContext();
 	const format = formatWithNameAndVersion(formats, formatName, formatVersion);
-	const {editorExtensions, extensionsDisabled} =
-		useFormatEditorExtensions(format);
+
+	const {editorExtensions, extensionsDisabled} = useFormatEditorExtensions(
+		formatName,
+		formatVersion
+	);
 
 	React.useEffect(() => {
 		if (!extensionsDisabled && format.loadState === 'unloaded') {

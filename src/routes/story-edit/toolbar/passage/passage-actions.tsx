@@ -15,15 +15,17 @@ import {GoToPassageButton} from './go-to-passage-button';
 import {SelectAllPassagesButton} from './select-all-passages-button';
 import {StartAtPassageButton} from './start-at-passage-button';
 import {TestPassageButton} from './test-passage-button';
+import {StoryFormatVariableMap} from '../../use-parsed-passage-variables';
 
 export interface PassageActionsProps {
 	getCenter: () => Point;
 	onOpenFuzzyFinder: () => void;
 	story: Story;
+	variableMap: StoryFormatVariableMap;
 }
 
 export const PassageActions: React.FC<PassageActionsProps> = props => {
-	const {getCenter, onOpenFuzzyFinder, story} = props;
+	const {getCenter, onOpenFuzzyFinder, story, variableMap} = props;
 	const {dispatch} = useStoriesContext();
 	const selectedPassages = React.useMemo(
 		() => story.passages.filter(passage => passage.selected),
@@ -50,7 +52,11 @@ export const PassageActions: React.FC<PassageActionsProps> = props => {
 	return (
 		<ButtonBar>
 			<CreatePassageButton getCenter={getCenter} story={story} />
-			<EditPassagesButton passages={selectedPassages} story={story} />
+			<EditPassagesButton
+				passages={selectedPassages}
+				story={story}
+				variableMap={variableMap}
+			/>
 			<RenamePassageButton
 				onRename={name => handleRename(name, soloSelectedPassage)}
 				passage={soloSelectedPassage}

@@ -8,15 +8,17 @@ import {PassageActions} from './passage/passage-actions';
 import {StoryActions} from './story/story-actions';
 import {UndoRedoButtons} from './undo-redo-buttons';
 import {ZoomButtons} from './zoom-buttons';
+import {StoryFormatVariableMap} from '../use-parsed-passage-variables';
 
 export interface StoryEditToolbarProps {
 	getCenter: () => Point;
 	onOpenFuzzyFinder: () => void;
 	story: Story;
+	variableMap: StoryFormatVariableMap;
 }
 
 export const StoryEditToolbar: React.FC<StoryEditToolbarProps> = props => {
-	const {getCenter, onOpenFuzzyFinder, story} = props;
+	const {getCenter, onOpenFuzzyFinder, story, variableMap} = props;
 	const {t} = useTranslation();
 
 	return (
@@ -33,6 +35,7 @@ export const StoryEditToolbar: React.FC<StoryEditToolbarProps> = props => {
 						getCenter={getCenter}
 						onOpenFuzzyFinder={onOpenFuzzyFinder}
 						story={story}
+						variableMap={variableMap}
 					/>
 				),
 				[t('common.story')]: <StoryActions story={story} />,

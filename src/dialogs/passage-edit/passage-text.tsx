@@ -1,10 +1,11 @@
+import {jaroWinkler} from '@skyra/jaro-winkler';
+import CodeMirror from 'codemirror';
 import * as React from 'react';
-import {jaroWinkler} from '@skyra/jaro-winkler';
-import {jaroWinkler} from '@skyra/jaro-winkler';
-import {VariableMap} from '../../routes/story-edit/use-parsed-passage-variables';
 import {useTranslation} from 'react-i18next';
+import {EditorConfiguration} from '../../codemirror/types';
 import {DialogEditor} from '../../components/container/dialog-card';
 import {CodeArea} from '../../components/control/code-area';
+import {StoryFormatVariableMap} from '../../routes/story-edit/use-parsed-passage-variables';
 import {usePrefsContext} from '../../store/prefs';
 import {Passage, Story} from '../../store/stories';
 import {
@@ -14,9 +15,8 @@ import {
 } from '../../store/story-formats';
 import {useCodeMirrorPassageHints} from '../../store/use-codemirror-passage-hints';
 import {useFormatCodeMirrorMode} from '../../store/use-format-codemirror-mode';
+import {useFormatEditorExtensions} from '../../store/use-format-editor-extensions';
 import {codeMirrorOptionsFromPrefs} from '../../util/codemirror-options';
-import {EditorConfiguration} from '../../codemirror/types';
-import CodeMirror from 'codemirror';
 
 export interface PassageTextProps {
 	disabled?: boolean;
@@ -28,7 +28,7 @@ export interface PassageTextProps {
 	storyFormat: StoryFormat;
 	storyFormatExtensionsDisabled?: boolean;
 	toolbarItems: StoryFormatToolbarItem[];
-	variableMap?: VariableMap;
+	variableMap?: StoryFormatVariableMap;
 }
 
 export const PassageText: React.FC<PassageTextProps> = props => {
@@ -211,35 +211,53 @@ export const PassageText: React.FC<PassageTextProps> = props => {
 		[toolbarItems, onExecCommand]
 	);
 
+	const {editorExtensions} = useFormatEditorExtensions(
+		story.storyFormat,
+		story.storyFormatVersion
+	);
 	const handleAtPrefix = useStableCallback(
 		(editor: CodeMirror.Editor) => {
 			if (!variableMap) {
 				return;
 			}
 
-			const wordRange = editor.findWordAt(editor.getCursor());
-			const word = editor
-				.getRange(wordRange.anchor, wordRange.head)
-				.slice(1)
-				.toLowerCase();
-
-			const rankedVariableNames = Object.keys(variableMap).map(name => ({
-				name,
-				score: jaroWinkler(word, name.toLowerCase())
-			}));
-
-			rankedVariableNames.sort((a, b) => b.score - a.score);
+			const {validNameRegex = /^\w+$/, suggestVariableName} =
+				editorExtensions?.variables || {};
 
 			editor.showHint({
 				completeSingle: false,
-				hint: () => ({
-					list: rankedVariableNames.map(({name}) => ({
-						text: name,
-						render: () => `@${name}`
-					})),
-					from: wordRange.anchor,
-					to: wordRange.head
-				})
+				hint() {
+					// Get the partial variable name directly before the cursor. It can include periods and underscores. The first character of each part (i.e. the first character of the variable or the first character after a period) must be a letter or underscore.
+					const cursor = editor.getCursor();
+					const precedingText = editor.getLine(cursor.line).slice(0, cursor.ch);
+					const variableQuery = precedingText.match(/@([^\s]+)?$/);
+
+					if (!variableQuery || !validNameRegex.test(variableQuery[1])) {
+						return;
+					}
+
+					let variableNames = variableMap
+						.variablesForPassage(passage)
+						.map(variable => variable.name);
+
+					if (suggestVariableName) {
+						variableNames = suggestVariableName(
+							variableNames,
+							variableQuery[1]
+						);
+					} else {
+						variableNames = similaritySort(variableNames, variableQuery[1]);
+					}
+
+					return {
+						list: variableNames,
+						from: {
+							line: cursor.line,
+							ch: cursor.ch - variableQuery[0].length
+						},
+						to: cursor
+					};
+				}
 			});
 		},
 		[variableMap]
@@ -260,8 +278,12 @@ export const PassageText: React.FC<PassageTextProps> = props => {
 				const isAt =
 					editor.getRange({line: cursor.line, ch: cursor.ch - 1}, cursor) ===
 					'@';
-				if (isAt) handleAtPrefix(editor);
-				autocompletePassageNames(editor);
+
+				if (isAt) {
+					handleAtPrefix(editor);
+				} else {
+					autocompletePassageNames(editor);
+				}
 			}
 		},
 		[autocompletePassageNames]
@@ -275,7 +297,7 @@ export const PassageText: React.FC<PassageTextProps> = props => {
 			placeholder: t('dialogs.passageEdit.passageTextPlaceholder'),
 			prefixTrigger: {
 				callback: handlePrefix,
-				prefixes: ['[[', '->', '/']
+				prefixes: ['[[', '->', '/', '@']
 			},
 			extraKeys: {
 				call(key, cm) {
@@ -375,4 +397,17 @@ function useStableCallback<T extends (...args: any[]) => any>(
 		(...args: Parameters<T>) => ref.current?.(...args),
 		[]
 	);
+}
+
+function similaritySort(strings: string[], query: string) {
+	let scoredStrings = strings.map(
+		name => [name, jaroWinkler(query, name)] as const
+	);
+	scoredStrings.sort((a, b) => b[1] - a[1]);
+	if (scoredStrings[0][1] >= 0.8) {
+		scoredStrings = scoredStrings.filter(s => s[1] >= 0.8);
+	} else if (scoredStrings[0][1] >= 0.6) {
+		scoredStrings = scoredStrings.filter(s => s[1] >= 0.6);
+	}
+	return scoredStrings.map(s => s[0]);
 }

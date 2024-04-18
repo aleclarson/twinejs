@@ -11,6 +11,7 @@ import {
 } from './story-formats.types';
 import {useStoreErrorReporter} from '../use-store-error-reporter';
 import {reducer} from './reducer';
+import {formatWithNameAndVersion} from './getters';
 
 const defaultBuiltins: StoryFormat[] = builtins().map(f => ({
 	...f,
@@ -20,14 +21,21 @@ const defaultBuiltins: StoryFormat[] = builtins().map(f => ({
 	userAdded: false
 }));
 
-export const StoryFormatsContext = React.createContext<StoryFormatsContextProps>(
-	{
+export const StoryFormatsContext =
+	React.createContext<StoryFormatsContextProps>({
 		dispatch: () => {},
 		formats: []
-	}
-);
+	});
 
 StoryFormatsContext.displayName = 'StoryFormats';
+
+export const useStoryFormat = (formatName: string, formatVersion: string) => {
+	const {dispatch, formats} = useStoryFormatsContext();
+	return {
+		format: formatWithNameAndVersion(formats, formatName, formatVersion),
+		dispatch
+	};
+};
 
 export const useStoryFormatsContext = () =>
 	React.useContext(StoryFormatsContext);
@@ -35,22 +43,20 @@ export const useStoryFormatsContext = () =>
 export const StoryFormatsContextProvider: React.FC = props => {
 	const {storyFormats} = usePersistence();
 	const {reportError} = useStoreErrorReporter();
-	const persistedReducer: React.Reducer<
-		StoryFormatsState,
-		StoryFormatsAction
-	> = React.useCallback(
-		(state, action) => {
-			const newState = reducer(state, action);
+	const persistedReducer: React.Reducer<StoryFormatsState, StoryFormatsAction> =
+		React.useCallback(
+			(state, action) => {
+				const newState = reducer(state, action);
 
-			try {
-				storyFormats.saveMiddleware(newState, action);
-			} catch (error) {
-				reportError(error as Error, 'store.errors.cantPersistStoryFormats');
-			}
-			return newState;
-		},
-		[reportError, storyFormats]
-	);
+				try {
+					storyFormats.saveMiddleware(newState, action);
+				} catch (error) {
+					reportError(error as Error, 'store.errors.cantPersistStoryFormats');
+				}
+				return newState;
+			},
+			[reportError, storyFormats]
+		);
 
 	const [state, dispatch] = useThunkReducer(persistedReducer, defaultBuiltins);
 

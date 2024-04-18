@@ -1,5 +1,6 @@
 import {ModeFactory} from 'codemirror';
 import {Thunk} from 'react-hook-thunk-reducer';
+import type {Passage} from '../stories';
 
 interface BaseStoryFormat {
 	id: string;
@@ -58,17 +59,54 @@ export type StoryFormatToolbarFactory = (
 	environment: StoryFormatToolbarFactoryEnvironment
 ) => StoryFormatToolbarItem[];
 
-export type StoryFormatVariableReference = {
+/**
+ * Either a variable reference or a variable definition.
+ */
+export type StoryFormatVariableToken = {
 	/** The name of the variable. */
 	name: string;
-	/** Where in the passage text the variable was found. */
-	position: {line: number; ch: number};
-	/** The expression used to update the variable. */
+	/**
+	 * Where in the passage text the variable was found. If null, the variable is built-in to the
+	 * story format and is not editable.
+	 */
+	position: {line: number; ch: number} | null;
+	/** The expression used to update the variable. If undefined, this is a reference. */
 	expression?: string;
-	/** The type of the variable. */
-	expressionType?: string;
 	/** If true, the variable is local to the passage. */
 	local?: boolean;
+	/**
+	 * The passage in which the variable was declared. If null, the variable is built-in to the story
+	 * format and is not editable.
+	 */
+	passage: Passage | null;
+};
+
+export type VariableToken = {
+	name: string;
+	position: {line: number; ch: number};
+	expression?: string;
+	local?: boolean;
+};
+
+export type StoryFormatVariablesExtension = {
+	/** Reserved words cannot be used as variable names. */
+	reservedWords?: string[];
+	/** Used in variable auto-completion and to find variable references in passage text. */
+	validNameRegex?: RegExp;
+	/**
+	 * Used to identify areas in the passage text where variables might be referenced. Every capture
+	 * group is searched for variable references.
+	 */
+	expressionRegex?: RegExp;
+	/**
+	 * Suggest variable names for auto-completion. If this is not defined, the default behavior is to
+	 * sort the variable names by Jaro-Winkler similarity.
+	 */
+	suggestVariableName?: (variableNames: string[], query: string) => string[];
+	/**
+	 * Variable definitions are parsed from passages, for auto-completion and validation.
+	 */
+	parseDefinitions?: (text: string) => (string | VariableToken)[];
 };
 
 /**
@@ -92,9 +130,7 @@ export interface StoryFormatProperties {
 				references?: {
 					parsePassageText?: (text: string) => string[];
 				};
-				variables?: {
-					parsePassageText?: (text: string) => StoryFormatVariableReference[];
-				};
+				variables?: StoryFormatVariablesExtension;
 			};
 		};
 	};

@@ -1,7 +1,7 @@
 import {getAppInfo} from '../util/app-info';
 import {formatEditorExtensions} from '../util/story-format';
 import {formatEditorExtensionsDisabled, usePrefsContext} from './prefs';
-import {StoryFormat} from './story-formats';
+import {StoryFormat, useStoryFormat} from './story-formats';
 
 type FormatEditorExtensions = ReturnType<typeof formatEditorExtensions>;
 
@@ -10,8 +10,12 @@ const editorExtensionsCache = new WeakMap<
 	FormatEditorExtensions
 >();
 
-export function useFormatEditorExtensions(format: StoryFormat) {
+export function useFormatEditorExtensions(
+	formatName: string,
+	formatVersion: string
+) {
 	const {prefs} = usePrefsContext();
+	const {format} = useStoryFormat(formatName, formatVersion);
 	const extensionsDisabled = formatEditorExtensionsDisabled(
 		prefs,
 		format.name,

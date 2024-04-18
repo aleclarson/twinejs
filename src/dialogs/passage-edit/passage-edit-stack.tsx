@@ -15,11 +15,11 @@ import {DialogComponentProps} from '../dialogs.types';
 import {PassageEditContents} from './passage-edit-contents';
 import './passage-edit-stack.css';
 import {VisibleWhitespace} from '../../components/visible-whitespace';
-import {VariableMap} from '../../routes/story-edit/use-parsed-passage-variables';
+import {StoryFormatVariableMap} from '../../routes/story-edit/use-parsed-passage-variables';
 
 export interface PassageEditStackProps extends DialogComponentProps {
 	passageIds: string[];
-	variableMap: VariableMap;
+	variableMap: StoryFormatVariableMap;
 	storyId: string;
 }
 
