@@ -31,17 +31,14 @@ export function prefixTriggerOption(
 
 		// Back up two words from the cursor.
 
-		const curWord = cm.findWordAt(cm.getDoc().getCursor());
-
-		curWord.anchor.ch--;
-
-		const prevWordRange = cm.findWordAt(curWord.anchor);
-		const prevWord = cm.getRange(prevWordRange.anchor, prevWordRange.head);
+		const doc = cm.getDoc();
+		const cursor = cm.getCursor();
+		const precedingText = doc.getLine(cursor.line).slice(0, cursor.ch);
 
 		// Do we have a match? Only trigger this once.
 
 		for (const prefix of prefixes) {
-			if (prevWord === prefix) {
+			if (precedingText.endsWith(prefix)) {
 				callback(cm);
 				return;
 			}
