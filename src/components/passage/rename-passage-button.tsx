@@ -67,6 +67,7 @@ export const RenamePassageButton: React.FC<
 	if (!props.disabled && props.passage) {
 		return (
 			<EnabledRenamePassageButton
+				key={props.passage.id}
 				{...(props as EnabledRenamePassageButtonProps)}
 			/>
 		);
