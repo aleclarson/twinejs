@@ -17,6 +17,7 @@ import {useCodeMirrorPassageHints} from '../../store/use-codemirror-passage-hint
 import {useFormatCodeMirrorMode} from '../../store/use-format-codemirror-mode';
 import {useFormatEditorExtensions} from '../../store/use-format-editor-extensions';
 import {codeMirrorOptionsFromPrefs} from '../../util/codemirror-options';
+import {similaritySort} from '../../util/similarity-sort';
 
 export interface PassageTextProps {
 	disabled?: boolean;
@@ -397,17 +398,4 @@ function useStableCallback<T extends (...args: any[]) => any>(
 		(...args: Parameters<T>) => ref.current?.(...args),
 		[]
 	);
-}
-
-function similaritySort(strings: string[], query: string) {
-	let scoredStrings = strings.map(
-		name => [name, jaroWinkler(query, name)] as const
-	);
-	scoredStrings.sort((a, b) => b[1] - a[1]);
-	if (scoredStrings[0][1] >= 0.8) {
-		scoredStrings = scoredStrings.filter(s => s[1] >= 0.8);
-	} else if (scoredStrings[0][1] >= 0.6) {
-		scoredStrings = scoredStrings.filter(s => s[1] >= 0.6);
-	}
-	return scoredStrings.map(s => s[0]);
 }

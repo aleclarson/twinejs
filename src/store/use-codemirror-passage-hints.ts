@@ -1,12 +1,15 @@
 import CodeMirror, {Editor, Handle} from 'codemirror';
 import * as React from 'react';
 import {Story} from './stories';
+import {similaritySort} from '../util/similarity-sort';
 
 type HintExtraKeyHandler = (editor: Editor, hint: Handle) => void;
 
 export function useCodeMirrorPassageHints(story: Story) {
 	return React.useCallback(
 		(editor: Editor) => {
+			const doc = editor.getDoc();
+
 			editor.showHint({
 				completeSingle: false,
 				extraKeys:
@@ -16,9 +19,7 @@ export function useCodeMirrorPassageHints(story: Story) {
 					// the event.
 					[']', '-', '|'].reduce<Record<string, HintExtraKeyHandler>>(
 						(result, character) => {
-							result[character] = (editor, hint) => {
-								const doc = editor.getDoc();
-
+							result[character] = (_editor, hint) => {
 								doc.replaceRange(character, doc.getCursor());
 								hint.close();
 							};
@@ -28,30 +29,40 @@ export function useCodeMirrorPassageHints(story: Story) {
 						{}
 					),
 				hint() {
-					const wordRange = editor.findWordAt(editor.getCursor());
-					const word = editor
-						.getRange(wordRange.anchor, wordRange.head)
-						.toLowerCase();
+					const cursor = editor.getCursor();
+					const text = doc.getLine(cursor.line);
+					const precedingText = text.slice(0, cursor.ch);
+					const followingText = text.slice(cursor.ch);
 
-					const comps = {
-						list: story.passages.reduce<string[]>((result, passage) => {
-							if (passage.name.toLowerCase().includes(word)) {
-								return [...result, passage.name];
-							}
+					const linkIndex = precedingText.lastIndexOf('[[');
+					const pointerIndex = precedingText.lastIndexOf('->');
+					const triggerIndex = Math.max(linkIndex, pointerIndex);
 
-							return result;
-						}, []),
-						from: wordRange.anchor,
-						to: wordRange.head
+					const wordIndex = triggerIndex + 2;
+					const word = precedingText.slice(wordIndex);
+
+					// Any passage with the same name as our link content is never included in the completion
+					// list, as it's likely to be a passage created from the typing of this very link.
+					const linkContent = precedingText.slice(linkIndex + 2);
+
+					const completions = {
+						list: similaritySort(
+							story.passages
+								.filter(p => p.name !== linkContent)
+								.map(p => p.name),
+							word
+						),
+						from: {line: cursor.line, ch: wordIndex},
+						to: cursor
 					};
 
-					CodeMirror.on(comps, 'pick', () => {
-						const doc = editor.getDoc();
+					// Insert a closing ]] if the user hasn't already done so.
+					if (!followingText.startsWith(']]'))
+						CodeMirror.on(completions, 'pick', () => {
+							doc.replaceRange(']] ', doc.getCursor());
+						});
 
-						doc.replaceRange(']] ', doc.getCursor());
-					});
-
-					return comps;
+					return completions;
 				}
 			});
 		},
