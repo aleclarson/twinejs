@@ -136,6 +136,27 @@ export const PassageText: React.FC<PassageTextProps> = props => {
 		(editor: CodeMirror.Editor) => {
 			onEditorChange(editor);
 
+			// Check if the selection is empty and between "[[" and "]]". If so, make sure there is no
+			// "->" or the cursor is after it. Finally, if all this is true, call the
+			// autocompletePassageNames function.
+			editor.on('beforeSelectionChange', (editor, change) => {
+				if (change.ranges.length > 1) return;
+				const {anchor, head} = change.ranges[0];
+				if (anchor.line === head.line && anchor.ch === head.ch) {
+					const {line, ch} = anchor;
+					const lineText = editor.getLine(line);
+					if (
+						lineText.lastIndexOf('[[', ch) !== -1 &&
+						lineText.indexOf(']]', ch) !== -1 &&
+						lineText.indexOf('->', ch) === -1
+					) {
+						requestAnimationFrame(() => {
+							autocompletePassageNames(editor);
+						});
+					}
+				}
+			});
+
 			// The potential combination of loading a mode and the dialog entrance
 			// animation seems to mess up CodeMirror's cursor rendering. The delay below
 			// is intended to run after the animation completes.

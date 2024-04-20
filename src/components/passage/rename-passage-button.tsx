@@ -19,7 +19,9 @@ export interface EnabledRenamePassageButtonProps {
 	story: Story;
 }
 
-export const EnabledRenamePassageButton: React.FC<EnabledRenamePassageButtonProps> = props => {
+export const EnabledRenamePassageButton: React.FC<
+	EnabledRenamePassageButtonProps
+> = props => {
 	const {onRename, passage, story} = props;
 	const [newName, setNewName] = React.useState(passage.name);
 	const {t} = useTranslation();
