@@ -2,7 +2,13 @@ import * as React from 'react';
 import {useTranslation} from 'react-i18next';
 import useErrorBoundary from 'use-error-boundary';
 import {ErrorMessage} from '../../components/error';
-import {passageWithId, storyWithId, updatePassage} from '../../store/stories';
+import {
+	Passage,
+	Story,
+	passageWithId,
+	storyWithId,
+	updatePassage
+} from '../../store/stories';
 import {
 	formatWithNameAndVersion,
 	useStoryFormatsContext
@@ -15,12 +21,14 @@ import {TagToolbar} from './tag-toolbar';
 import './passage-edit-contents.css';
 import {useStoryFormatToolbarItems} from './use-story-format-toolbar-items';
 import {StoryFormatVariableMap} from '../../routes/story-edit/use-parsed-passage-variables';
+import {usePassageChangeHandlers} from '../../routes/story-edit/use-passage-change-handlers';
+import {MarkerRange, TextMarker} from 'codemirror';
 
 export interface PassageEditContentsProps {
 	disabled?: boolean;
 	passageId: string;
 	storyId: string;
-	variableMap?: StoryFormatVariableMap;
+	variableMap: StoryFormatVariableMap;
 }
 
 export const PassageEditContents: React.FC<
@@ -97,10 +105,24 @@ export const PassageEditContents: React.FC<
 		[cmEditor, renderTabPlaceholders, refreshToolbarItems]
 	);
 
-	const onEditorChange = React.useCallback((editor: CodeMirror.Editor) => {
-		setCmEditor(editor);
-		renderTabPlaceholders(editor);
-	}, []);
+	// Add markers for tab placeholders and passage links.
+	const handlers = usePassageChangeHandlers(story, variableMap);
+	React.useEffect(() => {
+		if (cmEditor) {
+			renderTabPlaceholders(cmEditor);
+			renderPassageLinks(cmEditor, story, handlers);
+		}
+	}, [cmEditor, story.passages]);
+
+	// Clear all markers when the component unmounts, so document event listeners are removed.
+	React.useEffect(
+		() => () =>
+			cmEditor
+				?.getDoc()
+				.getAllMarks()
+				.forEach(marker => marker.clear()),
+		[cmEditor]
+	);
 
 	if (editorCrashed) {
 		return (
@@ -128,7 +150,7 @@ export const PassageEditContents: React.FC<
 				<PassageText
 					disabled={disabled}
 					onChange={handlePassageTextChange}
-					onEditorChange={onEditorChange}
+					onEditorChange={setCmEditor}
 					passage={passage}
 					story={story}
 					storyFormat={storyFormat}
@@ -213,4 +235,147 @@ function renderTabPlaceholders(
 			firstPlaceholder?.click();
 		});
 	}
+}
+
+type PassageChangeHandlers = ReturnType<typeof usePassageChangeHandlers>;
+
+function renderPassageLinks(
+	editor: CodeMirror.Editor,
+	story: Story,
+	{handleEditPassage}: PassageChangeHandlers
+) {
+	const doc = editor.getDoc();
+	const markers = doc.getAllMarks();
+
+	const getMarkerId = (passageId: string, line: number, ch: number) =>
+		`${line}:${ch}->${passageId}`;
+
+	const oldMarkers = new Map<string, TextMarker>();
+	markers.forEach(marker => {
+		if (marker.className === 'passage-link') {
+			const {from} = marker.find() as MarkerRange;
+			const passageId = marker.attributes!['data-passage-id'];
+			oldMarkers.set(getMarkerId(passageId, from.line, from.ch), marker);
+		}
+	});
+
+	doc.eachLine(line => {
+		const lineNumber = doc.getLineNumber(line)!;
+		const linkRegex = /\[\[(?:([^\]]+)->)?([^\]]+)\]\]/g;
+
+		let match: RegExpExecArray | null;
+		while ((match = linkRegex.exec(line.text))) {
+			const [text, , passageName] = match;
+			const passage = story.passages.find(
+				passage => passage.name === passageName
+			);
+			if (!passage) {
+				continue;
+			}
+
+			const markerId = getMarkerId(passage.id, lineNumber, match.index);
+			if (oldMarkers.has(markerId)) {
+				oldMarkers.delete(markerId);
+				continue;
+			}
+
+			const from: CodeMirror.Position = {line: lineNumber, ch: match.index};
+			const to: CodeMirror.Position = {
+				line: lineNumber,
+				ch: from.ch + text.length
+			};
+
+			const marker = doc.markText(from, to, {
+				className: 'passage-link',
+				attributes: {
+					'data-passage-id': passage.id
+				}
+			});
+
+			let markerNode: HTMLElement;
+			let isAltKeyDown = false;
+			let isMousedOver = false;
+
+			const toggleClickable = (target: HTMLElement) => {
+				target.classList.toggle('clickable', isAltKeyDown && isMousedOver);
+			};
+
+			const isTargetMarker = (e: Event): e is Event & {target: HTMLElement} =>
+				e.target instanceof HTMLElement &&
+				e.target.matches(`.passage-link[data-passage-id="${passage.id}"]`);
+
+			const handleMouseEvent = (e: MouseEvent) => {
+				if (!isTargetMarker(e)) {
+					return;
+				}
+
+				switch (e.type) {
+					case 'mouseleave':
+						isMousedOver = false;
+						toggleClickable(markerNode);
+						break;
+					case 'mouseenter':
+						isMousedOver = true;
+						toggleClickable((markerNode = e.target));
+						break;
+					case 'click':
+						if (e.ctrlKey || e.metaKey || e.shiftKey) {
+							return;
+						}
+						if (e.button === 0 && e.altKey) {
+							e.preventDefault();
+							e.stopPropagation();
+							handleEditPassage(passage);
+						}
+						break;
+				}
+			};
+
+			const handleKeyEvent = (e: KeyboardEvent) => {
+				switch (e.type) {
+					case 'keyup':
+						if (e.key === 'Alt') {
+							isAltKeyDown = false;
+							if (markerNode) {
+								toggleClickable(markerNode);
+							}
+						}
+						break;
+					case 'keydown':
+						if (e.key === 'Alt') {
+							isAltKeyDown = true;
+							if (markerNode) {
+								toggleClickable(markerNode);
+							}
+						}
+						break;
+				}
+			};
+
+			document.addEventListener('click', handleMouseEvent, {
+				capture: true,
+				passive: false
+			});
+			document.addEventListener('mouseenter', handleMouseEvent, {
+				capture: true
+			});
+			document.addEventListener('mouseleave', handleMouseEvent, {
+				capture: true
+			});
+			document.addEventListener('keydown', handleKeyEvent);
+			document.addEventListener('keyup', handleKeyEvent);
+
+			marker.on('clear', () => {
+				document.removeEventListener('click', handleMouseEvent);
+				document.removeEventListener('mouseenter', handleMouseEvent);
+				document.removeEventListener('mouseleave', handleMouseEvent);
+				document.removeEventListener('keydown', handleKeyEvent);
+				document.removeEventListener('keyup', handleKeyEvent);
+			});
+		}
+	});
+
+	oldMarkers.forEach(marker => {
+		marker.clear();
+	});
 }

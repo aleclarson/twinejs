@@ -8,6 +8,11 @@
 	padding: var(--grid-size);
 }
 
+.passage-edit-contents .passage-link.clickable {
+	text-decoration: underline;
+	cursor: pointer;
+}
+
 .passage-edit-contents .placeholder {
 	color: var(--light-gray);
 	font-style: italic;
